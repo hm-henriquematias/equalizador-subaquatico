@@ -1,3 +1,9 @@
+# -*- coding: utf-8 -*-
+"""
+Spyder Editor
+
+Este é um arquivo de script temporário.
+"""
 #!/usr/bin/env python
 # coding: utf-8
 """
@@ -41,7 +47,37 @@ def convolucao(sinal, canal, numero_amostra):
        ac[k] = a0 * canal[0] + a1 * canal[1] + a2 * canal[2]
  
    return ac
- 
+
+def lms(u, d, mu, N):
+    y = np.zeros(N)
+    e = np.zeros(N)
+    w = np.zeros(1)
+
+    for n in range(N):
+        x = np.flipud(u[n:n+1])
+        y[n] = np.dot(x, w)
+        e[n] = d[n] - y[n]
+        w =  w + mu * x * e[n]
+
+    return y, e, w
+
+def rls(u, d, mu, N):
+    y = np.zeros(N)
+    e = np.zeros(N)
+    w = np.zeros(1)
+    R = 1/0.5 * np.identity(1)
+
+    for k in range(N):
+        x = u
+        y[k] = np.dot(w, x[k])
+        e[k] = d[k] - y[k]
+        R1 = np.dot(np.dot(np.dot(R,x[k]),x[k].T),R)
+        R2 = mu + np.dot(np.dot(x[k],R),x[k].T)
+        R = 1/mu * (R - R1/R2)
+        w += np.dot(R, x[k]) * e[k]
+
+    return y, e, w
+
 # Parametros para geração de sinal
 numero_amostra = 500
 canal = cria_canal()
@@ -61,14 +97,13 @@ iniciar_matriz_de_pesos = 'zeros'
 fator_de_esquecimento = 0.98
 valor_de_inicializacao = 0.5
  
-# Inicialização dos filtros
-filter_lms = pd.filters.FilterLMS(tamanho_da_entrada, mi_passo_adaptacao, iniciar_matriz_de_pesos)
-filter_rls = pd.filters.FilterRLS(tamanho_da_entrada, fator_de_esquecimento, valor_de_inicializacao)
- 
-# Realização da filtragem
-sinal_lms, erro_lms, matriz_pesos_lms = filter_lms.run(sinal, sinal_apos_canal)
-sinal_rls, erro_rls, matriz_pesos_rls = filter_rls.run(sinal, sinal_apos_canal)
- 
+# Equalizacao
+sinal_lms, erro_lms, matriz_pesos_lms = lms(sinal, sinal_apos_canal, 
+                                            mi_passo_adaptacao, numero_amostra)
+
+sinal_rls, erro_rls, matriz_pesos_rls = rls(sinal_apos_canal, sinal, 
+                                            fator_de_esquecimento, numero_amostra)
+
 # Geração de gráficos
 # Gráfico do sinal
 fig, ax = plt.subplots()
